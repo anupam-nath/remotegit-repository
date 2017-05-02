@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:context="http://www.springframework.org/schema/context" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8077" doc:name="HTTP Listener Configuration"/>
+    <db:generic-config name="PostgresDB" url="${url}?user=postgres&amp;password=${password}" driverClassName="${driverClass}" doc:name="Generic Database Configuration"/>
+    <context:property-placeholder location="postgres-DB.properties"/>
+    <flow name="getAllEmpInfo">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/emp" doc:name="HTTP" allowedMethods="GET"/>
+        <db:select config-ref="PostgresDB" doc:name="Database">
+            <db:parameterized-query><![CDATA[select * from employee]]></db:parameterized-query>
+        </db:select>
+        <mulexml:object-to-xml-transformer doc:name="Object to XML"/>
+    </flow>
+    <flow name="getEmpInfoByID">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/emp/{emp_id}" allowedMethods="GET" doc:name="HTTP"/>
+        <db:select config-ref="PostgresDB" doc:name="Database">
+            <db:parameterized-query><![CDATA[select * from employee where id=#[message.inboundProperties.'http.uri.params'.emp_id]]]></db:parameterized-query>
+        </db:select>
+        <dw:transform-message metadata:id="76f3c820-236f-45a6-9a02-08b5ea2767e8" doc:name="Transform Message">
+            <dw:input-payload doc:sample="sample_data\list_map.dwl"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload map ((payload01 , indexOfPayload01) -> {
+	ID: payload01.id,
+	employee_id: payload01.id,
+	First_Name: payload01.first_name,
+	Last_Name: payload01.last_name,
+	Salary: payload01.salary
+})]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+</mule>
